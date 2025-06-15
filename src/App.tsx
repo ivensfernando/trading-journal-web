@@ -5,10 +5,12 @@ import dataProvider from './api/dataProvider';
 import authProvider from './auth/authProvider';
 import LoginPage from './auth/LoginPage';
 import CreateUserPage from './pages/CreateUserPage';
+import UserProfilePage from './pages/UserProfilePage';
+import ExchangeKeysPage from './pages/ExchangeKeysPage';
 import Dashboard from './pages/Dashboard';
 import MyLayout from './layouts/MyLayout';
 import { TradeList, TradeCreate, TradeEdit } from './resources/trades';
-
+import { lightTheme, darkTheme } from './theme/theme';
 
 
 function App() {
@@ -21,9 +23,14 @@ function App() {
       loginPage={LoginPage}
       layout={MyLayout}
       dashboard={Dashboard}
+      theme={lightTheme}
+      darkTheme={darkTheme} // ✅ enable dark mode
+      defaultTheme="light"
   >
     <CustomRoutes>
       <Route path="/create-user" element={<CreateUserPage />} />
+      <Route path="/profile" element={<UserProfilePage />} />
+      <Route path="/exchange-keys" element={<ExchangeKeysPage />} />
     </CustomRoutes>
     <Resource
         name="trades"
@@ -31,7 +38,6 @@ function App() {
         create={TradeCreate}
         edit={TradeEdit}
     />
-
   </Admin>
   );
 }

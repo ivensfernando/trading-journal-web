@@ -1,8 +1,16 @@
-import { Box, Typography } from '@mui/material';
+import { Typography, Box } from '@mui/material';
 
 const MyFooter = () => (
-    <Box textAlign="center" p={2} sx={{ borderTop: '1px solid #ccc' }}>
-        <Typography variant="body2">© {new Date().getFullYear()} Trading Journal</Typography>
+    <Box
+        component="footer"
+        p={2}
+        textAlign="center"
+        bgcolor="background.paper"
+        borderTop="1px solid #ccc"
+    >
+        <Typography variant="body2" color="textSecondary">
+            © 2025 Trading Journal
+        </Typography>
     </Box>
 );
 

@@ -1,18 +1,71 @@
-import { AppBar, TitlePortal, useGetIdentity, Logout } from 'react-admin';
-import { Box, Typography } from '@mui/material';
+import {
+    AppBarProps,
+    UserMenu,
+    Logout,
+    MenuItemLink,
+    useGetIdentity,
+    RefreshIconButton,
+    ToggleThemeButton
+} from 'react-admin';
+import { AppBar as MuiAppBar, Toolbar, Typography, Box } from '@mui/material';
+import { AccountCircle } from '@mui/icons-material';
+import SettingsIcon from '@mui/icons-material/Settings';
+import { Link } from 'react-router-dom';
+import React from 'react';
+import { PageMenu } from '../components/PageMenu';
 
-const MyAppBar = () => {
+const MyUserMenu = (props: any) => (
+    <UserMenu {...props}>
+        <MenuItemLink
+            to="/profile"
+            primaryText="Profile"
+            leftIcon={<AccountCircle />}
+            component={Link}
+        />
+        <MenuItemLink
+            to="/exchange-keys"
+            primaryText="Exchange Keys"
+            leftIcon={<SettingsIcon />}
+            component={Link}
+        />
+        <Logout />
+    </UserMenu>
+);
+
+const MyAppBar = (props: AppBarProps) => {
     const { data: identity } = useGetIdentity();
+
     return (
-        <AppBar>
-            <TitlePortal />
-            <Box flex="1">
-                <Typography variant="h6">Trading Journal</Typography>
-            </Box>
-            <Typography>{identity?.fullName}</Typography>
-            <Logout />
-        </AppBar>
+        <MuiAppBar position="sticky" color="primary" elevation={1} {...props}>
+            <Toolbar sx={{ position: 'relative', minHeight: 64 }}>
+                <PageMenu />
+
+                {/* Title centered absolutely */}
+                <Typography
+                    variant="h6"
+                    color="inherit"
+                    sx={{
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    Trading Journal
+                </Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 'auto' }}>
+                    <RefreshIconButton />
+                    <ToggleThemeButton />
+                    <Typography color="inherit" sx={{ ml: 1 }}>
+                        {identity?.fullName}
+                    </Typography>
+                    {props.userMenu}
+                </Box>
+            </Toolbar>
+
+        </MuiAppBar>
     );
 };
 
-export default MyAppBar;
+export default (props: any) => <MyAppBar userMenu={<MyUserMenu />} {...props} />;
+
