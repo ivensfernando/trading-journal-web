@@ -32,15 +32,21 @@ const MyUserMenu = (props: any) => (
     </UserMenu>
 );
 
-const MyAppBar = (props: AppBarProps) => {
+// 🛠 FIX: wrap MuiAppBar in React.forwardRef + cast props to any to avoid overload TS error
+const MyAppBar = React.forwardRef((props: AppBarProps, ref) => {
     const { data: identity } = useGetIdentity();
 
     return (
-        <MuiAppBar position="sticky" color="primary" elevation={1} {...props}>
+        <MuiAppBar
+            position="sticky"
+            color="primary"
+            elevation={1}
+            ref={ref}
+            {...(props as any)} // 👈 bypass TS sx typing incompatibility
+        >
             <Toolbar sx={{ position: 'relative', minHeight: 64 }}>
                 <PageMenu />
 
-                {/* Title centered absolutely */}
                 <Typography
                     variant="h6"
                     color="inherit"
@@ -62,10 +68,8 @@ const MyAppBar = (props: AppBarProps) => {
                     {props.userMenu}
                 </Box>
             </Toolbar>
-
         </MuiAppBar>
     );
-};
+});
 
 export default (props: any) => <MyAppBar userMenu={<MyUserMenu />} {...props} />;
-
