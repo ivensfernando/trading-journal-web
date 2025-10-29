@@ -59,12 +59,6 @@ export default function UserProfilePage() {
                         <TextField label="Email" value={identity?.email ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
                     </Box>
                     <Box sx={half}>
-                        <TextField label="Phone Number" value={identity?.phoneNumber ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Timezone" value={identity?.timezone ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
                         <TextField label="First Name" value={identity?.firstName ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
                     </Box>
                     <Box sx={half}>
