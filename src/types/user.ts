@@ -1,3 +1,12 @@
-import type { UserIdentity as RaUserIdentity } from 'ra-core';
-
-export type UserIdentity = RaUserIdentity;
+export type UserIdentity = {
+    id: string | number;
+    username: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    fullName?: string;
+    phoneNumber?: string;
+    timezone?: string;
+    createdAt?: string;
+    updatedAt?: string;
+};

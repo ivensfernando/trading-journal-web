@@ -14,8 +14,7 @@ const getDisplayName = (identity?: UserIdentity) => {
 };
 
 const UserProfilePage = () => {
-    const { data: identityData, isLoading } = useGetIdentity();
-    const identity = identityData as UserIdentity | undefined;
+    const { data: identity, isLoading } = useGetIdentity<UserIdentity>();
 
     const fullName = getDisplayName(identity);
 

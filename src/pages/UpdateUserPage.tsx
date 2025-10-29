@@ -23,8 +23,7 @@ const defaultForm: UpdateUserForm = {
 const UpdateUserPage = () => {
     const notify = useNotify();
     const redirect = useRedirect();
-    const { data: identityData } = useGetIdentity();
-    const identity = identityData as UserIdentity | undefined;
+    const { data: identity } = useGetIdentity<UserIdentity>();
     const [form, setForm] = useState<UpdateUserForm>(defaultForm);
     const [submitting, setSubmitting] = useState(false);
 
