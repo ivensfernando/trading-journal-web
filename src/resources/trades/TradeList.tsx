@@ -160,11 +160,12 @@ const TradeList = () => (
                 <Datagrid rowClick="edit">
                     <DateField source="trade_date"/>
                     <TextField source="exchange"/>
-                    <TextField source="symbol"/>
                     <TextField source="type"/>
-                    <NumberField source="entry_price"/>
-                    <NumberField source="exit_price"/>
+                    <TextField source="contract_type"/>
+                    <TextField source="symbol"/>
                     <NumberField source="leverage"/>
+                    <NumberField source="price"/>
+                    <NumberField source="exit_price"/>
                 </Datagrid>
             </List>
             <Box
