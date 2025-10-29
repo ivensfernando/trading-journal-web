@@ -5,8 +5,8 @@ export type UserIdentity = {
     firstName?: string;
     lastName?: string;
     fullName?: string;
-    phoneNumber?: string;
-    timezone?: string;
+    bio?: string;
+    avatarUrl?: string;
     createdAt?: string;
     updatedAt?: string;
 };

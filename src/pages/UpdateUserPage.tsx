@@ -8,16 +8,16 @@ type UpdateUserForm = {
     email: string;
     firstName: string;
     lastName: string;
-    phoneNumber: string;
-    timezone: string;
+    bio: string;
+    avatarUrl: string;
 };
 
 const defaultForm: UpdateUserForm = {
     email: '',
     firstName: '',
     lastName: '',
-    phoneNumber: '',
-    timezone: '',
+    bio: '',
+    avatarUrl: '',
 };
 
 const UpdateUserPage = () => {
@@ -33,8 +33,8 @@ const UpdateUserPage = () => {
                 email: identity.email ?? '',
                 firstName: identity.firstName ?? '',
                 lastName: identity.lastName ?? '',
-                phoneNumber: identity.phoneNumber ?? '',
-                timezone: identity.timezone ?? '',
+                bio: identity.bio ?? '',
+                avatarUrl: identity.avatarUrl ?? '',
             });
         }
     }, [identity]);
@@ -48,11 +48,19 @@ const UpdateUserPage = () => {
         setSubmitting(true);
 
         try {
+            const payload = {
+                email: form.email || undefined,
+                first_name: form.firstName || undefined,
+                last_name: form.lastName || undefined,
+                bio: form.bio || undefined,
+                avatar_url: form.avatarUrl || undefined,
+            };
+
             const res = await fetch(`${API_URL}/me`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) {
@@ -111,18 +119,19 @@ const UpdateUserPage = () => {
                                 </Grid>
                             </Grid>
                             <TextField
-                                label="Phone Number"
-                                name="phoneNumber"
-                                value={form.phoneNumber}
-                                onChange={handleChange('phoneNumber')}
+                                label="Bio"
+                                name="bio"
+                                value={form.bio}
+                                onChange={handleChange('bio')}
                                 fullWidth
+                                multiline
+                                minRows={3}
                             />
                             <TextField
-                                label="Timezone"
-                                name="timezone"
-                                placeholder="e.g. America/New_York"
-                                value={form.timezone}
-                                onChange={handleChange('timezone')}
+                                label="Avatar URL"
+                                name="avatarUrl"
+                                value={form.avatarUrl}
+                                onChange={handleChange('avatarUrl')}
                                 fullWidth
                             />
                             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
