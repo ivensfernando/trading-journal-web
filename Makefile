@@ -89,24 +89,24 @@ commitGit:
 	DELETED="$$(git diff --cached --name-only --diff-filter=D | sort || true)"; \
 	RENAMED="$$(git diff --cached --name-status --diff-filter=R | awk '{print $$2 " -> " $$3}' | sort || true)"; \
 	TMP_MSG="$$(mktemp)"; \
-	cat > "$$TMP_MSG" <<MSG; \
-$${MSG_PREFIX:-chore}: sync workspace
-
-$${ADDED:+Added:}
-$${ADDED:+$$(echo "$$ADDED" | sed 's/^/  - /')}
-
-$${MODIFIED:+Modified:}
-$${MODIFIED:+$$(echo "$$MODIFIED" | sed 's/^/  - /')}
-
-$${DELETED:+Deleted:}
-$${DELETED:+$$(echo "$$DELETED" | sed 's/^/  - /')}
-
-$${RENAMED:+Renamed:}
-$${RENAMED:+$$(echo "$$RENAMED" | sed 's/^/  - /')}
-
-Branch: $$BRANCH  Remote: $(REMOTE)
-Date: $$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-MSG
+	echo "$${MSG_PREFIX:-chore}: sync workspace" > "$$TMP_MSG"; \
+	if [ -n "$$ADDED" ]; then \
+		printf "\nAdded:\n" >> "$$TMP_MSG"; \
+		printf "%s\n" "$$ADDED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
+	fi; \
+	if [ -n "$$MODIFIED" ]; then \
+		printf "\nModified:\n" >> "$$TMP_MSG"; \
+		printf "%s\n" "$$MODIFIED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
+	fi; \
+	if [ -n "$$DELETED" ]; then \
+		printf "\nDeleted:\n" >> "$$TMP_MSG"; \
+		printf "%s\n" "$$DELETED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
+	fi; \
+	if [ -n "$$RENAMED" ]; then \
+		printf "\nRenamed:\n" >> "$$TMP_MSG"; \
+		printf "%s\n" "$$RENAMED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
+	fi; \
+	printf "\nBranch: $$BRANCH  Remote: $(REMOTE)\nDate: %s\n" "$$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$$TMP_MSG"; \
 	echo "📝 Commit message:"; echo "-----------------"; cat "$$TMP_MSG"; echo "-----------------"; \
 	git commit -F "$$TMP_MSG"; \
 	rm -f "$$TMP_MSG"; \
