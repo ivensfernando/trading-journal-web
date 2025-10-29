@@ -1,77 +1,169 @@
-import { Button, Card, CardContent, TextField, Typography, Box, Stack } from '@mui/material';
-import { useGetIdentity } from 'react-admin';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
+import { useGetIdentity, useNotify, useRedirect } from 'react-admin';
 import { Link as RouterLink } from 'react-router-dom';
+
+import { API_URL } from '../config/api';
 import type { UserIdentity } from '../types/user';
 
-const getDisplayName = (identity?: UserIdentity) => {
-    if (!identity) return '';
-    if (identity.fullName?.trim()) return identity.fullName;
-    return [identity.firstName, identity.lastName].filter(Boolean).join(' ');
+type ProfileFormState = {
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    bio: string;
+    avatarUrl: string;
 };
 
-export default function UserProfilePage() {
-    // ✅ não passe <UserIdentity>; o genérico é do ERRO
-    const { data: identityRaw, isLoading } = useGetIdentity();
-    const identity = identityRaw as UserIdentity | undefined;
+const emptyForm: ProfileFormState = {
+    username: '',
+    email: '',
+    firstName: '',
+    lastName: '',
+    bio: '',
+    avatarUrl: '',
+};
 
-    const fullName = getDisplayName(identity);
+const mapIdentityToForm = (identity?: UserIdentity): ProfileFormState => ({
+    username: identity?.username ?? '',
+    email: identity?.email ?? '',
+    firstName: identity?.firstName ?? '',
+    lastName: identity?.lastName ?? '',
+    bio: identity?.bio ?? '',
+    avatarUrl: identity?.avatarUrl ?? '',
+});
 
-    // estilo para “duas colunas” no md+ (1 coluna no xs)
-    const half = { width: { xs: '100%', md: 'calc(50% - 8px)' } };
+const UpdateUserPage = () => {
+    const notify = useNotify();
+    const redirect = useRedirect();
+    const { data: identity, isLoading } = useGetIdentity<UserIdentity>();
+    const [form, setForm] = useState<ProfileFormState>(emptyForm);
+    const [submitting, setSubmitting] = useState(false);
+
+    const initialForm = useMemo(() => mapIdentityToForm(identity ?? undefined), [identity]);
+
+    useEffect(() => {
+        setForm(initialForm);
+    }, [initialForm]);
+
+    const handleChange = (field: keyof ProfileFormState) => (event: ChangeEvent<HTMLInputElement>) => {
+        setForm((prev) => ({ ...prev, [field]: event.target.value }));
+    };
+
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setSubmitting(true);
+
+        try {
+            const res = await fetch(`${API_URL}/me`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: form.username,
+                    email: form.email,
+                    first_name: form.firstName,
+                    last_name: form.lastName,
+                    bio: form.bio,
+                    avatar_url: form.avatarUrl,
+                }),
+            });
+
+            if (!res.ok) {
+                throw new Error('Failed to update profile');
+            }
+
+            notify('Profile updated successfully');
+            redirect('/profile');
+        } catch (error) {
+            console.error('Error updating profile', error);
+            notify('Failed to update profile', { type: 'warning' });
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
-        <Card>
+        <Card component="form" onSubmit={handleSubmit} noValidate>
             <CardContent>
-                {/* Cabeçalho */}
-                <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    mb={2}
-                    flexWrap="wrap"
-                    gap={1}
-                >
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={1}>
                     <Box>
-                        <Typography variant="h5">User Profile</Typography>
+                        <Typography variant="h5">Edit Profile</Typography>
                         <Typography variant="body2" color="text.secondary">
-                            Manage the information associated with your account.
+                            Update the information associated with your account.
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        component={RouterLink}
-                        to="/profile/edit"
-                        disabled={isLoading}
-                    >
-                        Update Profile
+                    <Button component={RouterLink} to="/profile" variant="outlined" disabled={submitting}>
+                        Cancel
                     </Button>
                 </Box>
 
-                {/* Campos (Stack = sem Grid) */}
-                <Stack direction="row" flexWrap="wrap" gap={2}>
-                    <Box sx={half}>
-                        <TextField label="Full Name" value={fullName} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Username" value={identity?.username ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Email" value={identity?.email ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Phone Number" value={identity?.phoneNumber ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Timezone" value={identity?.timezone ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="First Name" value={identity?.firstName ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
-                    <Box sx={half}>
-                        <TextField label="Last Name" value={identity?.lastName ?? ''} InputProps={{ readOnly: true }} fullWidth margin="normal" />
-                    </Box>
+                <Stack spacing={2}>
+                    <TextField
+                        label="Username"
+                        name="username"
+                        value={form.username}
+                        onChange={handleChange('username')}
+                        fullWidth
+                        required
+                        disabled={isLoading || submitting}
+                    />
+                    <TextField
+                        label="Email"
+                        name="email"
+                        type="email"
+                        value={form.email}
+                        onChange={handleChange('email')}
+                        fullWidth
+                        required
+                        disabled={isLoading || submitting}
+                    />
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                        <TextField
+                            label="First Name"
+                            name="firstName"
+                            value={form.firstName}
+                            onChange={handleChange('firstName')}
+                            fullWidth
+                            disabled={isLoading || submitting}
+                        />
+                        <TextField
+                            label="Last Name"
+                            name="lastName"
+                            value={form.lastName}
+                            onChange={handleChange('lastName')}
+                            fullWidth
+                            disabled={isLoading || submitting}
+                        />
+                    </Stack>
+                    <TextField
+                        label="Bio"
+                        name="bio"
+                        value={form.bio}
+                        onChange={handleChange('bio')}
+                        fullWidth
+                        multiline
+                        minRows={3}
+                        disabled={isLoading || submitting}
+                    />
+                    <TextField
+                        label="Avatar URL"
+                        name="avatarUrl"
+                        value={form.avatarUrl}
+                        onChange={handleChange('avatarUrl')}
+                        fullWidth
+                        disabled={isLoading || submitting}
+                    />
                 </Stack>
+
+                <Box display="flex" justifyContent="flex-end" mt={3}>
+                    <Button type="submit" variant="contained" disabled={submitting || isLoading}>
+                        {submitting ? 'Saving...' : 'Save Changes'}
+                    </Button>
+                </Box>
             </CardContent>
         </Card>
     );
-}
+};
+
+export default UpdateUserPage;
