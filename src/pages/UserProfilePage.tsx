@@ -69,24 +69,6 @@ const UserProfilePage = () => {
                     </Grid>
                     <Grid item xs={12} md={6}>
                         <TextField
-                            label="Phone Number"
-                            value={identity?.phoneNumber ?? ''}
-                            InputProps={{ readOnly: true }}
-                            fullWidth
-                            margin="normal"
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
-                            label="Timezone"
-                            value={identity?.timezone ?? ''}
-                            InputProps={{ readOnly: true }}
-                            fullWidth
-                            margin="normal"
-                        />
-                    </Grid>
-                    <Grid item xs={12} md={6}>
-                        <TextField
                             label="First Name"
                             value={identity?.firstName ?? ''}
                             InputProps={{ readOnly: true }}
@@ -98,6 +80,26 @@ const UserProfilePage = () => {
                         <TextField
                             label="Last Name"
                             value={identity?.lastName ?? ''}
+                            InputProps={{ readOnly: true }}
+                            fullWidth
+                            margin="normal"
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            label="Bio"
+                            value={identity?.bio ?? ''}
+                            InputProps={{ readOnly: true }}
+                            multiline
+                            minRows={identity?.bio ? 3 : 1}
+                            fullWidth
+                            margin="normal"
+                        />
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            label="Avatar URL"
+                            value={identity?.avatarUrl ?? ''}
                             InputProps={{ readOnly: true }}
                             fullWidth
                             margin="normal"

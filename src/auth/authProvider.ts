@@ -60,17 +60,17 @@ const authProvider = {
         id: user.id,
         username: user.username,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
         fullName:
-          user.fullName ??
-          [user.firstName, user.lastName]
+          user.full_name ??
+          [user.first_name, user.last_name]
             .filter((part: string | undefined) => Boolean(part))
             .join(' '),
-        phoneNumber: user.phoneNumber,
-        timezone: user.timezone,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        bio: user.bio,
+        avatarUrl: user.avatar_url,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
       };
 
       return identity;
