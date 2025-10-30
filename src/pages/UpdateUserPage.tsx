@@ -36,7 +36,8 @@ const mapIdentityToForm = (identity?: UserIdentity): ProfileFormState => ({
 const UpdateUserPage = () => {
     const notify = useNotify();
     const redirect = useRedirect();
-    const { data: identity, isLoading } = useGetIdentity<UserIdentity>();
+    const { data: identityData, isLoading } = useGetIdentity();
+    const identity = identityData as UserIdentity | undefined;
     const [form, setForm] = useState<ProfileFormState>(emptyForm);
     const [submitting, setSubmitting] = useState(false);
 
