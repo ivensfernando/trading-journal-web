@@ -1,118 +1,230 @@
 # Makefile
 SHELL := /bin/bash
+.ONESHELL:
+.SHELLFLAGS := -eu -o pipefail -c
+
+.DEFAULT_GOAL := help
+
 REMOTE ?= origin
 
-.PHONY: updateGit
-updateGit:
-	@set -euo pipefail; \
-	BRANCH="$$(git rev-parse --abbrev-ref HEAD)"; \
-	if [ "$$BRANCH" = "HEAD" ]; then \
-		echo "❌ Você está em detached HEAD. Troque para uma branch primeiro."; exit 1; \
-	fi; \
-	echo "➡️  Atualizando '$$BRANCH' a partir de '$(REMOTE)'..."; \
-	git fetch "$(REMOTE)"; \
-	BACKUP_REF="backup/$$BRANCH-$$(date +%Y%m%d-%H%M%S)"; \
-	echo "💾 Criando backup em '$$BACKUP_REF'"; \
-	git branch "$$BACKUP_REF"; \
-	echo "📦 Guardando alterações locais (inclui untracked) em stash"; \
-	git stash push --include-untracked -m "pre-updateGit $$BACKUP_REF" >/dev/null || true; \
-	echo "🔁 Resetando para '$(REMOTE)/$$BRANCH' (hard)"; \
-	git reset --hard "$(REMOTE)/$$BRANCH"; \
-	echo "✅ Pronto! Workspace agora igual ao servidor."
+# -----------------------------------------------------------------------------
+# Package manager detection ----------------------------------------------------
+# -----------------------------------------------------------------------------
+ifeq ($(strip $(PACKAGE_MANAGER)),)
+  ifneq ($(wildcard pnpm-lock.yaml),)
+    PACKAGE_MANAGER := pnpm
+  else ifneq ($(wildcard yarn.lock),)
+    PACKAGE_MANAGER := yarn
+  else
+    PACKAGE_MANAGER := npm
+  endif
+endif
 
-# (Opcional) sem backup/stash:
-.PHONY: updateGitNoBackup
-updateGitNoBackup:
-	@set -euo pipefail; \
-	BRANCH="$$(git rev-parse --abbrev-ref HEAD)"; \
-	test "$$BRANCH" != "HEAD"; \
-	git fetch "$(REMOTE)"; \
-	git reset --hard "$(REMOTE)/$$BRANCH"; \
-	echo "✅ Reset hard feito para $(REMOTE)/$$BRANCH."
+ifeq ($(PACKAGE_MANAGER),pnpm)
+  INSTALL_CMD := pnpm install
+  RUN_SCRIPT := pnpm
+  EXEC_CMD := pnpm
+  LOCKFILE ?= pnpm-lock.yaml
+  DEPS_CMD := pnpm ls --depth=0
+else ifeq ($(PACKAGE_MANAGER),yarn)
+  INSTALL_CMD := yarn install --frozen-lockfile
+  RUN_SCRIPT := yarn
+  EXEC_CMD := yarn
+  LOCKFILE ?= yarn.lock
+  DEPS_CMD := yarn list --depth=0
+else
+  PACKAGE_MANAGER := npm
+  INSTALL_CMD := npm install
+  RUN_SCRIPT := npm run
+  EXEC_CMD := npx
+  LOCKFILE ?= package-lock.json
+  DEPS_CMD := npm ls --depth=0
+endif
 
+NODE_MODULES_STAMP := node_modules/.install.stamp
 
-.PHONY: restoreGit
-restoreGit:
-	@set -euo pipefail; \
-	echo "🔍 Buscando backups disponíveis..."; \
-	git branch --list "backup/*" || true; \
-	echo ""; \
-	read -p "Digite o nome da branch de backup que deseja restaurar (ou deixe em branco para pular): " BACKUP; \
-	if [ -n "$$BACKUP" ]; then \
-		echo "🔁 Restaurando branch de backup '$$BACKUP'..."; \
-		git switch "$$BACKUP"; \
-	else \
-		echo "⏭️  Pulando restauração de branch."; \
-	fi; \
-	echo ""; \
-	echo "📦 Stashes disponíveis:"; \
-	git stash list | grep pre-updateGit || echo "Nenhum stash encontrado."; \
-	read -p "Digite o índice do stash que deseja aplicar (ex: stash@{0}), ou deixe em branco para pular: " STASH; \
-	if [ -n "$$STASH" ]; then \
-		echo "🔄 Aplicando $$STASH..."; \
-		git stash apply "$$STASH"; \
-	else \
-		echo "⏭️  Nenhum stash aplicado."; \
-	fi; \
-	echo "✅ Restauração concluída."
+# Helper macro to run a package script
+run-script = $(RUN_SCRIPT) $(1)
 
+# Helper used in the "test" target to forward CLI arguments consistently.
+ifeq ($(PACKAGE_MANAGER),npm)
+  TEST_CMD = CI=1 $(RUN_SCRIPT) test -- $(TEST_ARGS)
+else
+  TEST_CMD = CI=1 $(RUN_SCRIPT) test $(TEST_ARGS)
+endif
 
-.PHONY: cleanBackups
-cleanBackups:
-	@set -euo pipefail; \
-	echo "🧹 Removendo branches de backup..."; \
-	BRANCHES=$$(git branch --list "backup/*" | tr -d ' *' || true); \
-	if [ -n "$$BRANCHES" ]; then \
-		echo "$$BRANCHES" | xargs -r -n1 git branch -D; \
-	else \
-		echo "Nenhuma branch 'backup/*' encontrada."; \
-	fi; \
-	echo "🧹 Removendo stashes pre-updateGit..."; \
-	STASHES=$$(git stash list --format="%gd %gs" | grep "pre-updateGit" | awk '{print $$1}' || true); \
-	if [ -n "$$STASHES" ]; then \
-		echo "$$STASHES" | while read -r ref; do git stash drop "$$ref"; done; \
-	else \
-		echo "Nenhum stash 'pre-updateGit' encontrado."; \
-	fi; \
-	echo "✅ Limpeza concluída."
+TEST_ARGS ?= --watch=false --runInBand
 
-.PHONY: commitGit
-commitGit:
-	@set -euo pipefail; \
-	BRANCH="$$(git rev-parse --abbrev-ref HEAD)"; \
-	if [ "$$BRANCH" = "HEAD" ]; then echo "❌ Detached HEAD. Troque para uma branch."; exit 1; fi; \
-	echo "➕ Staging de todas as alterações (add/modify/delete/rename)"; \
-	git add -A; \
-	if git diff --cached --quiet; then echo "ℹ️  Nada para commitar."; exit 0; fi; \
-	ADDED="$$(git diff --cached --name-only --diff-filter=A | sort || true)"; \
-	MODIFIED="$$(git diff --cached --name-only --diff-filter=M | sort || true)"; \
-	DELETED="$$(git diff --cached --name-only --diff-filter=D | sort || true)"; \
-	RENAMED="$$(git diff --cached --name-status --diff-filter=R | awk '{print $$2 " -> " $$3}' | sort || true)"; \
-	TMP_MSG="$$(mktemp)"; \
-	echo "$${MSG_PREFIX:-chore}: sync workspace" > "$$TMP_MSG"; \
-	if [ -n "$$ADDED" ]; then \
-		printf "\nAdded:\n" >> "$$TMP_MSG"; \
-		printf "%s\n" "$$ADDED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
-	fi; \
-	if [ -n "$$MODIFIED" ]; then \
-		printf "\nModified:\n" >> "$$TMP_MSG"; \
-		printf "%s\n" "$$MODIFIED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
-	fi; \
-	if [ -n "$$DELETED" ]; then \
-		printf "\nDeleted:\n" >> "$$TMP_MSG"; \
-		printf "%s\n" "$$DELETED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
-	fi; \
-	if [ -n "$$RENAMED" ]; then \
-		printf "\nRenamed:\n" >> "$$TMP_MSG"; \
-		printf "%s\n" "$$RENAMED" | sed 's/^/  - /' >> "$$TMP_MSG"; \
-	fi; \
-	printf "\nBranch: $$BRANCH  Remote: $(REMOTE)\nDate: %s\n" "$$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$$TMP_MSG"; \
-	echo "📝 Commit message:"; echo "-----------------"; cat "$$TMP_MSG"; echo "-----------------"; \
-	git commit -F "$$TMP_MSG"; \
-	rm -f "$$TMP_MSG"; \
-	if git rev-parse --abbrev-ref "@{u}" >/dev/null 2>&1; then \
-		echo "📤 Push para upstream existente..."; git push; \
-	else \
-		echo "📤 Definindo upstream e push..."; git push -u "$(REMOTE)" "$$BRANCH"; \
-	fi; \
-	echo "✅ Commit + push concluídos."
+# -----------------------------------------------------------------------------
+# High-level project workflows -------------------------------------------------
+# -----------------------------------------------------------------------------
+.PHONY: help install start build test test-watch clean clean-all format lint deps-info
+
+help: ## Display this help message with the available targets
+	@printf "\nAvailable targets (package manager: %s)\n\n" "$(PACKAGE_MANAGER)"
+	@awk -F':|##' '/^[a-zA-Z0-9_.-]+:.*##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$NF }' $(MAKEFILE_LIST)
+
+$(NODE_MODULES_STAMP): package.json $(LOCKFILE)
+	@echo "📦 Installing dependencies with $(PACKAGE_MANAGER)..."
+	@$(INSTALL_CMD)
+	@mkdir -p $(dir $@)
+	@touch $@
+
+install: $(NODE_MODULES_STAMP) ## Install Node.js dependencies
+
+start: $(NODE_MODULES_STAMP) ## Start the development server
+	@$(call run-script,start)
+
+build: $(NODE_MODULES_STAMP) ## Build the production bundle
+	@$(call run-script,build)
+
+test: TEST_ARGS := --watch=false --runInBand
+
+test: $(NODE_MODULES_STAMP) ## Run the test suite once in CI-friendly mode
+	@$(TEST_CMD)
+
+test-watch: TEST_ARGS :=
+
+test-watch: $(NODE_MODULES_STAMP) ## Run the test suite in watch mode
+	@$(TEST_CMD)
+
+lint: $(NODE_MODULES_STAMP) ## Run ESLint if available
+	@$(EXEC_CMD) eslint "src/**/*.{ts,tsx,js,jsx}" || echo "(eslint not installed - skipping)"
+
+format: $(NODE_MODULES_STAMP) ## Format code with Prettier if available
+	@$(EXEC_CMD) prettier --write "src/**/*.{ts,tsx,js,jsx,json,css,md}" || echo "(prettier not installed - skipping)"
+
+clean: ## Remove build artifacts
+	@echo "🧹 Removing build artifacts..."
+	rm -rf build
+
+clean-all: clean ## Remove build artifacts and dependencies
+	@echo "🧹 Removing node_modules and install stamp..."
+	rm -rf node_modules $(NODE_MODULES_STAMP)
+
+deps-info: $(NODE_MODULES_STAMP) ## Print the tree of production dependencies (if available)
+	@$(DEPS_CMD) || echo "(dependency tree command unavailable)"
+
+# -----------------------------------------------------------------------------
+# Git helpers ------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+.PHONY: updateGit updateGitNoBackup restoreGit cleanBackups commitGit
+
+updateGit: ## Fetch remote changes and hard reset current branch after creating a backup branch and stash
+	BRANCH="$(shell git rev-parse --abbrev-ref HEAD)"
+	if [ "$$BRANCH" = "HEAD" ]; then
+		echo "❌ You are in a detached HEAD state. Switch to a branch first."
+		exit 1
+	fi
+	echo "➡️  Updating '$$BRANCH' from '$(REMOTE)'..."
+	git fetch "$(REMOTE)"
+	BACKUP_REF="backup/$$BRANCH-$$(date +%Y%m%d-%H%M%S)"
+	echo "💾 Creating backup branch '$$BACKUP_REF'"
+	git branch "$$BACKUP_REF"
+	echo "📦 Stashing local changes (including untracked files)"
+	git stash push --include-untracked -m "pre-updateGit $$BACKUP_REF" >/dev/null || true
+	echo "🔁 Resetting to '$(REMOTE)/$$BRANCH' (hard)"
+	git reset --hard "$(REMOTE)/$$BRANCH"
+	echo "✅ Workspace is now in sync with the remote."
+
+updateGitNoBackup: ## Reset current branch hard to the remote without creating backups
+	BRANCH="$(shell git rev-parse --abbrev-ref HEAD)"
+	if [ "$$BRANCH" = "HEAD" ]; then
+		echo "❌ Detached HEAD. Switch to a branch."
+		exit 1
+	fi
+	git fetch "$(REMOTE)"
+	git reset --hard "$(REMOTE)/$$BRANCH"
+	echo "✅ Hard reset completed for $(REMOTE)/$$BRANCH."
+
+restoreGit: ## Assist in restoring from previously created backups and stashes
+	echo "🔍 Available backup branches:"
+	git branch --list "backup/*" || true
+	echo
+	read -p "Enter the backup branch to restore (leave blank to skip): " BACKUP
+	if [ -n "$$BACKUP" ]; then
+		echo "🔁 Switching to backup branch '$$BACKUP'..."
+		git switch "$$BACKUP"
+	else
+		echo "⏭️  Skipping branch restoration."
+	fi
+	echo
+	echo "📦 Matching stashes:"
+	if ! git stash list | grep pre-updateGit >/dev/null; then
+		echo "No matching stash found."
+	fi
+	read -p "Enter the stash reference to apply (e.g. stash@{0}) or leave blank to skip: " STASH
+	if [ -n "$$STASH" ]; then
+		echo "🔄 Applying $$STASH..."
+		git stash apply "$$STASH"
+	else
+		echo "⏭️  No stash applied."
+	fi
+	echo "✅ Restore complete."
+
+cleanBackups: ## Remove all backup branches and stashes created by updateGit
+	echo "🧹 Removing backup branches..."
+	BRANCHES=$$(git branch --list "backup/*" | tr -d ' *' || true)
+	if [ -n "$$BRANCHES" ]; then
+		echo "$$BRANCHES" | xargs -r -n1 git branch -D
+	else
+		echo "No 'backup/*' branches found."
+	fi
+	echo "🧹 Removing pre-updateGit stashes..."
+	STASHES=$$(git stash list --format="%gd %gs" | grep "pre-updateGit" | awk '{print $$1}' || true)
+	if [ -n "$$STASHES" ]; then
+		echo "$$STASHES" | while read -r ref; do git stash drop "$$ref"; done
+	else
+		echo "No 'pre-updateGit' stashes found."
+	fi
+	echo "✅ Cleanup complete."
+
+commitGit: ## Stage all changes, create a commit message template, and push to the configured remote
+	BRANCH="$(shell git rev-parse --abbrev-ref HEAD)"
+	if [ "$$BRANCH" = "HEAD" ]; then
+		echo "❌ Detached HEAD. Switch to a branch."
+		exit 1
+	fi
+	echo "➕ Staging all modifications"
+	git add -A
+	if git diff --cached --quiet; then
+		echo "ℹ️  Nothing to commit."
+		exit 0
+	fi
+	ADDED=$$(git diff --cached --name-only --diff-filter=A | sort || true)
+	MODIFIED=$$(git diff --cached --name-only --diff-filter=M | sort || true)
+	DELETED=$$(git diff --cached --name-only --diff-filter=D | sort || true)
+	RENAMED=$$(git diff --cached --name-status --diff-filter=R | awk '{print $$2 " -> " $$3}' | sort || true)
+	TMP_MSG=$$(mktemp)
+	cat <<-'MSG' > "$$TMP_MSG"
+	$${MSG_PREFIX:-chore}: sync workspace
+	
+	$${ADDED:+Added:}
+	$${ADDED:+$$(echo "$$ADDED" | sed 's/^/  - /')}
+	
+	$${MODIFIED:+Modified:}
+	$${MODIFIED:+$$(echo "$$MODIFIED" | sed 's/^/  - /')}
+	
+	$${DELETED:+Deleted:}
+	$${DELETED:+$$(echo "$$DELETED" | sed 's/^/  - /')}
+	
+	$${RENAMED:+Renamed:}
+	$${RENAMED:+$$(echo "$$RENAMED" | sed 's/^/  - /')}
+	
+	Branch: $$BRANCH  Remote: $(REMOTE)
+	Date: $$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+	MSG
+	echo "📝 Commit message:"
+	echo "-----------------"
+	cat "$$TMP_MSG"
+	echo "-----------------"
+	git commit -F "$$TMP_MSG"
+	rm -f "$$TMP_MSG"
+	if git rev-parse --abbrev-ref "@{u}" >/dev/null 2>&1; then
+		echo "📤 Pushing to existing upstream..."
+		git push
+	else
+		echo "📤 Setting upstream and pushing..."
+		git push -u "$(REMOTE)" "$$BRANCH"
+	fi
+	echo "✅ Commit + push complete."
