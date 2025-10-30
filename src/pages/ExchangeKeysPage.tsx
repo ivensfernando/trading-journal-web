@@ -7,7 +7,6 @@ import {
     Checkbox,
     CircularProgress,
     FormControlLabel,
-    Grid,
     InputAdornment,
     TextField,
     Typography,
@@ -79,11 +78,15 @@ const ExchangeKeysPage = () => {
     };
 
     return (
-        <Grid container spacing={2}>
+        <Box
+            display="grid"
+            gap={2}
+            gridTemplateColumns={{ xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }}
+        >
             {exchangeList.map((exchange: any, index: number) => {
                 const exchangeKey = String(exchange.id ?? exchange.name ?? index);
                 return (
-                    <Grid item xs={12} md={6} key={exchangeKey}>
+                    <Box key={exchangeKey}>
                         <Card>
                             <CardHeader title={exchange?.name || 'Exchange'} />
                             <CardContent>
@@ -96,10 +99,10 @@ const ExchangeKeysPage = () => {
                                 {renderTextField(exchangeKey, 'apiPassphrase', 'API Passphrase')}
                             </CardContent>
                         </Card>
-                    </Grid>
+                    </Box>
                 );
             })}
-        </Grid>
+        </Box>
     );
 };
 
