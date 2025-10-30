@@ -1,168 +1,101 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
-import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
-import { useGetIdentity, useNotify, useRedirect } from 'react-admin';
-import { Link as RouterLink } from 'react-router-dom';
-
+import { useEffect, useState } from 'react';
+import { useNotify, useRedirect, useGetIdentity } from 'react-admin';
 import { API_URL } from '../config/api';
-import type { UserIdentity } from '../types/user';
+import { UserIdentity } from '../types/user';
+import { Box, Button, Card, CardContent, Grid, Stack, TextField, Typography } from '@mui/material';
 
-type ProfileFormState = {
-    username: string;
+type UpdateUserForm = {
     email: string;
     firstName: string;
     lastName: string;
-    bio: string;
-    avatarUrl: string;
+    // phoneNumber: string;
+    // timezone: string;
 };
 
-const emptyForm: ProfileFormState = {
-    username: '',
+const defaultForm: UpdateUserForm = {
     email: '',
     firstName: '',
     lastName: '',
-    bio: '',
-    avatarUrl: '',
+    // phoneNumber: '',
+    // timezone: '',
 };
-
-const mapIdentityToForm = (identity?: UserIdentity): ProfileFormState => ({
-    username: identity?.username ?? '',
-    email: identity?.email ?? '',
-    firstName: identity?.firstName ?? '',
-    lastName: identity?.lastName ?? '',
-    bio: identity?.bio ?? '',
-    avatarUrl: identity?.avatarUrl ?? '',
-});
 
 const UpdateUserPage = () => {
     const notify = useNotify();
     const redirect = useRedirect();
-    const { data: identity, isLoading } = useGetIdentity<UserIdentity>();
-    const [form, setForm] = useState<ProfileFormState>(emptyForm);
+    const { data } = useGetIdentity(); // ❌ removido <UserIdentity>
+    const identity = data as UserIdentity | undefined; // ✅ tipa os dados
+    const [form, setForm] = useState<UpdateUserForm>(defaultForm);
     const [submitting, setSubmitting] = useState(false);
 
-    const initialForm = useMemo(() => mapIdentityToForm(identity ?? undefined), [identity]);
-
     useEffect(() => {
-        setForm(initialForm);
-    }, [initialForm]);
+        if (identity) {
+            setForm({
+                email: identity.email ?? '',
+                firstName: identity.firstName ?? '',
+                lastName: identity.lastName ?? '',
+                // phoneNumber: identity.phoneNumber ?? '',
+                // timezone: identity.timezone ?? '',
+            });
+        }
+    }, [identity]);
 
-    const handleChange = (field: keyof ProfileFormState) => (event: ChangeEvent<HTMLInputElement>) => {
-        setForm((prev) => ({ ...prev, [field]: event.target.value }));
-    };
+    const handleChange = (field: keyof UpdateUserForm) =>
+        (event: React.ChangeEvent<HTMLInputElement>) =>
+            setForm(prev => ({ ...prev, [field]: event.target.value }));
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         setSubmitting(true);
-
         try {
             const res = await fetch(`${API_URL}/me`, {
-                method: 'PATCH',
+                method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: form.username,
-                    email: form.email,
-                    first_name: form.firstName,
-                    last_name: form.lastName,
-                    bio: form.bio,
-                    avatar_url: form.avatarUrl,
-                }),
+                body: JSON.stringify(form),
             });
-
-            if (!res.ok) {
-                throw new Error('Failed to update profile');
-            }
-
+            if (!res.ok) throw new Error('Failed to update profile');
             notify('Profile updated successfully');
             redirect('/profile');
         } catch (error) {
             console.error('Error updating profile', error);
-            notify('Failed to update profile', { type: 'warning' });
+            notify('Failed to update profile');
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-        <Card component="form" onSubmit={handleSubmit} noValidate>
-            <CardContent>
-                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={1}>
-                    <Box>
-                        <Typography variant="h5">Edit Profile</Typography>
-                        <Typography variant="body2" color="text.secondary">
-                            Update the information associated with your account.
-                        </Typography>
-                    </Box>
-                    <Button component={RouterLink} to="/profile" variant="outlined" disabled={submitting}>
-                        Cancel
-                    </Button>
-                </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" px={2}>
+            <Card sx={{ maxWidth: 640, width: '100%' }}>
+                <CardContent>
+                    <Typography variant="h5" component="h2" gutterBottom>
+                        Update Profile
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Keep your contact details up to date so we can personalize your experience.
+                    </Typography>
+                    <Box component="form" onSubmit={handleSubmit}>
 
-                <Stack spacing={2}>
-                    <TextField
-                        label="Username"
-                        name="username"
-                        value={form.username}
-                        onChange={handleChange('username')}
-                        fullWidth
-                        required
-                        disabled={isLoading || submitting}
-                    />
-                    <TextField
-                        label="Email"
-                        name="email"
-                        type="email"
-                        value={form.email}
-                        onChange={handleChange('email')}
-                        fullWidth
-                        required
-                        disabled={isLoading || submitting}
-                    />
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <TextField
-                            label="First Name"
-                            name="firstName"
-                            value={form.firstName}
-                            onChange={handleChange('firstName')}
-                            fullWidth
-                            disabled={isLoading || submitting}
-                        />
-                        <TextField
-                            label="Last Name"
-                            name="lastName"
-                            value={form.lastName}
-                            onChange={handleChange('lastName')}
-                            fullWidth
-                            disabled={isLoading || submitting}
-                        />
-                    </Stack>
-                    <TextField
-                        label="Bio"
-                        name="bio"
-                        value={form.bio}
-                        onChange={handleChange('bio')}
-                        fullWidth
-                        multiline
-                        minRows={3}
-                        disabled={isLoading || submitting}
-                    />
-                    <TextField
-                        label="Avatar URL"
-                        name="avatarUrl"
-                        value={form.avatarUrl}
-                        onChange={handleChange('avatarUrl')}
-                        fullWidth
-                        disabled={isLoading || submitting}
-                    />
-                </Stack>
+                            <TextField label="Email" name="email" type="email" value={form.email} onChange={handleChange('email')} required fullWidth />
 
-                <Box display="flex" justifyContent="flex-end" mt={3}>
-                    <Button type="submit" variant="contained" disabled={submitting || isLoading}>
-                        {submitting ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                </Box>
-            </CardContent>
-        </Card>
+
+                                    <TextField label="First Name" name="firstName" value={form.firstName} onChange={handleChange('firstName')} fullWidth />
+
+                                    <TextField label="Last Name" name="lastName" value={form.lastName} onChange={handleChange('lastName')} fullWidth />
+
+                            {/*<TextField label="Phone Number" name="phoneNumber" value={form.phoneNumber} onChange={handleChange('phoneNumber')} fullWidth />*/}
+                            {/*<TextField label="Timezone" name="timezone" placeholder="e.g. America/New_York" value={form.timezone} onChange={handleChange('timezone')} fullWidth />*/}
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
+                                <Button variant="outlined" color="secondary" onClick={() => redirect('/profile')} disabled={submitting}>Cancel</Button>
+                                <Button type="submit" variant="contained" color="primary" disabled={submitting}>
+                                    {submitting ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                            </Stack>
+                        </Box>
+                </CardContent>
+            </Card>
+        </Box>
     );
 };
 

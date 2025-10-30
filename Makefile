@@ -72,7 +72,7 @@ $(NODE_MODULES_STAMP): package.json $(LOCKFILE)
 
 install: $(NODE_MODULES_STAMP) ## Install Node.js dependencies
 
-start: $(NODE_MODULES_STAMP) ## Start the development server
+run: $(NODE_MODULES_STAMP) ## Start the development server
 	@$(call run-script,start)
 
 build: $(NODE_MODULES_STAMP) ## Build the production bundle
@@ -198,19 +198,19 @@ commitGit: ## Stage all changes, create a commit message template, and push to t
 	TMP_MSG=$$(mktemp)
 	cat <<-'MSG' > "$$TMP_MSG"
 	$${MSG_PREFIX:-chore}: sync workspace
-	
+
 	$${ADDED:+Added:}
 	$${ADDED:+$$(echo "$$ADDED" | sed 's/^/  - /')}
-	
+
 	$${MODIFIED:+Modified:}
 	$${MODIFIED:+$$(echo "$$MODIFIED" | sed 's/^/  - /')}
-	
+
 	$${DELETED:+Deleted:}
 	$${DELETED:+$$(echo "$$DELETED" | sed 's/^/  - /')}
-	
+
 	$${RENAMED:+Renamed:}
 	$${RENAMED:+$$(echo "$$RENAMED" | sed 's/^/  - /')}
-	
+
 	Branch: $$BRANCH  Remote: $(REMOTE)
 	Date: $$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 	MSG
@@ -228,3 +228,13 @@ commitGit: ## Stage all changes, create a commit message template, and push to t
 		git push -u "$(REMOTE)" "$$BRANCH"
 	fi
 	echo "✅ Commit + push complete."
+
+
+updateFromMain: ## Update From Main branch
+	@set -euo pipefail; \
+	BRANCH="$$(git rev-parse --abbrev-ref HEAD)"; \
+	if [ "$$BRANCH" = "HEAD" ]; then echo "❌ Detached HEAD."; exit 1; fi; \
+	echo "➡️  Atualizando '$$BRANCH' com 'origin/main'..."; \
+	git fetch origin; \
+	git merge origin/main; \
+	echo "✅ Branch '$$BRANCH' atualizada com sucesso!"
