@@ -57,11 +57,10 @@ const UpdateUserPage = () => {
 
         try {
             const res = await fetch(`${API_URL}/me`, {
-                method: 'PATCH',
+                method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    username: form.username,
                     email: form.email,
                     first_name: form.firstName,
                     last_name: form.lastName,
