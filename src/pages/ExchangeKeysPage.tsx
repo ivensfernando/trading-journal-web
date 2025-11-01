@@ -229,16 +229,16 @@ const ExchangeKeysPage = () => {
         setSavingState((prev) => ({ ...prev, [exchangeKey]: true }));
 
         const payload = {
-            exchange_id: exchangeId,
+            // exchange_id: exchangeId,
             exchangeId,
-            api_key: values.apiKey,
+            // api_key: values.apiKey,
             apiKey: values.apiKey,
-            api_secret: values.apiSecret,
+            // api_secret: values.apiSecret,
             apiSecret: values.apiSecret,
-            api_passphrase: values.apiPassphrase,
+            // api_passphrase: values.apiPassphrase,
             apiPassphrase: values.apiPassphrase,
-            show_in_trade: values.showInTrade,
-            showInTrade: values.showInTrade
+            // show_in_trade: values.showInTrade,
+            showInForms: values.showInTrade
         };
 
         try {
