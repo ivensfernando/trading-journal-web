@@ -429,6 +429,7 @@ const ExchangeKeysPage = () => {
                 const isSaving = savingState[exchangeKey] ?? false;
                 const isDeleting = deletingState[exchangeKey] ?? false;
                 const isTesting = testingState[exchangeKey] ?? false;
+                const hasTestableKeys = Boolean(values.apiKey?.trim()) && Boolean(values.apiSecret?.trim());
                 const isBusy = isSaving || isDeleting;
                 return (
                     <Box key={exchangeKey}>
@@ -471,13 +472,15 @@ const ExchangeKeysPage = () => {
                                 {renderTextField(exchangeKey, 'apiSecret', 'API Secret', values.apiSecret, isBusy)}
                                 {renderTextField(exchangeKey, 'apiPassphrase', 'API Passphrase', values.apiPassphrase, isBusy)}
                                 <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
-                                    <Button
-                                        variant="outlined"
-                                        onClick={() => handleTestConnection(exchangeKey, exchangeId)}
-                                        disabled={isBusy || isTesting}
-                                    >
-                                        {isTesting ? 'Testing…' : 'Test connection'}
-                                    </Button>
+                                    {hasTestableKeys && (
+                                        <Button
+                                            variant="outlined"
+                                            onClick={() => handleTestConnection(exchangeKey, exchangeId)}
+                                            disabled={isBusy || isTesting}
+                                        >
+                                            {isTesting ? 'Testing…' : 'Test connection'}
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="contained"
                                         onClick={() => handleSave(exchangeKey, exchangeId)}
