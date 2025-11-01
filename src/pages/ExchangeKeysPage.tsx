@@ -11,9 +11,13 @@ import {
     Button,
     TextField,
     Typography,
-    IconButton
+    IconButton,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions
 } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, Close as CloseIcon } from '@mui/icons-material';
 import { useGetList, useNotify } from 'react-admin';
 import { API_URL } from '../config/api';
 
@@ -48,6 +52,12 @@ const ExchangeKeysPage = () => {
     const [userExchangesLoading, setUserExchangesLoading] = useState<boolean>(true);
     const [savingState, setSavingState] = useState<SavingState>({});
     const [deletingState, setDeletingState] = useState<SavingState>({});
+    const [testingState, setTestingState] = useState<SavingState>({});
+    const [testModalState, setTestModalState] = useState<{ open: boolean; title: string; message: string }>({
+        open: false,
+        title: '',
+        message: ''
+    });
 
     const toggleVisibility = (exchangeKey: string, field: FieldName) => {
         setFieldVisibility((prev) => ({
@@ -310,6 +320,46 @@ const ExchangeKeysPage = () => {
         }
     };
 
+    const handleTestConnection = async (exchangeKey: string, exchangeId: string | number) => {
+        setTestingState((prev) => ({ ...prev, [exchangeKey]: true }));
+
+        try {
+            const response = await fetch(`${API_URL}/user-exchanges/${exchangeId}/test`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+
+            let message = '';
+            let title = 'Connection Test';
+
+            if (response.headers.get('content-type')?.includes('application/json')) {
+                const payload = await response.json();
+                message = JSON.stringify(payload, null, 2);
+            } else {
+                message = await response.text();
+            }
+
+            if (!response.ok) {
+                title = 'Connection Test Failed';
+            }
+
+            setTestModalState({
+                open: true,
+                title,
+                message: message || 'No response returned from the server.'
+            });
+        } catch (error) {
+            console.error(error);
+            setTestModalState({
+                open: true,
+                title: 'Connection Test Failed',
+                message: 'Unable to test the connection at this time.'
+            });
+        } finally {
+            setTestingState((prev) => ({ ...prev, [exchangeKey]: false }));
+        }
+    };
+
     const combinedLoading = exchangesLoading || userExchangesLoading;
 
     if (combinedLoading) {
@@ -378,6 +428,7 @@ const ExchangeKeysPage = () => {
                 const hasData = existingData[exchangeKey] ?? false;
                 const isSaving = savingState[exchangeKey] ?? false;
                 const isDeleting = deletingState[exchangeKey] ?? false;
+                const isTesting = testingState[exchangeKey] ?? false;
                 const isBusy = isSaving || isDeleting;
                 return (
                     <Box key={exchangeKey}>
@@ -419,7 +470,14 @@ const ExchangeKeysPage = () => {
                                 {renderTextField(exchangeKey, 'apiKey', 'API Key', values.apiKey, isBusy)}
                                 {renderTextField(exchangeKey, 'apiSecret', 'API Secret', values.apiSecret, isBusy)}
                                 {renderTextField(exchangeKey, 'apiPassphrase', 'API Passphrase', values.apiPassphrase, isBusy)}
-                                <Box display="flex" justifyContent="flex-end" mt={2}>
+                                <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
+                                    <Button
+                                        variant="outlined"
+                                        onClick={() => handleTestConnection(exchangeKey, exchangeId)}
+                                        disabled={isBusy || isTesting}
+                                    >
+                                        {isTesting ? 'Testing…' : 'Test connection'}
+                                    </Button>
                                     <Button
                                         variant="contained"
                                         onClick={() => handleSave(exchangeKey, exchangeId)}
@@ -433,6 +491,31 @@ const ExchangeKeysPage = () => {
                     </Box>
                 );
             })}
+            <Dialog
+                open={testModalState.open}
+                onClose={() => setTestModalState((prev) => ({ ...prev, open: false }))}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle sx={{ pr: 6 }}>
+                    {testModalState.title}
+                    <IconButton
+                        aria-label="Close"
+                        onClick={() => setTestModalState((prev) => ({ ...prev, open: false }))}
+                        sx={{ position: 'absolute', right: 8, top: 8 }}
+                    >
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent dividers>
+                    <Typography component="pre" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {testModalState.message}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setTestModalState((prev) => ({ ...prev, open: false }))}>Close</Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 };
