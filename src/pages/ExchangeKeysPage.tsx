@@ -34,6 +34,14 @@ type FormValues = {
 
 type SavingState = Record<string, boolean>;
 
+type ExchangeCredentialsMetadata = {
+    hasApiKey: boolean;
+    hasApiSecret: boolean;
+    hasApiPassphrase: boolean;
+};
+
+type ValidationErrors = Record<string, Partial<Record<FieldName, string>>>;
+
 const toSnakeCase = (value: string) => value.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
 const getDefaultFormValues = (): FormValues => ({
@@ -58,6 +66,8 @@ const ExchangeKeysPage = () => {
         title: '',
         message: ''
     });
+    const [credentialsMetadata, setCredentialsMetadata] = useState<Record<string, ExchangeCredentialsMetadata>>({});
+    const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
     const toggleVisibility = (exchangeKey: string, field: FieldName) => {
         setFieldVisibility((prev) => ({
@@ -158,6 +168,7 @@ const ExchangeKeysPage = () => {
 
                 const nextFormValues: Record<string, FormValues> = {};
                 const nextExisting: Record<string, boolean> = {};
+                const nextMetadata: Record<string, ExchangeCredentialsMetadata> = {};
 
                 items.forEach((entry: any) => {
                     const exchangeKey = normalizeExchangeKey(entry);
@@ -168,8 +179,12 @@ const ExchangeKeysPage = () => {
                     const apiKey = extractValue(entry, 'apiKey') ?? '';
                     const apiSecret = extractValue(entry, 'apiSecret') ?? '';
                     const apiPassphrase = extractValue(entry, 'apiPassphrase') ?? '';
+                    const showInFormsValue = extractValue(entry, 'showInForms');
                     const showInTradeValue = extractValue(entry, 'showInTrade');
-                    const showInTrade = parseBoolean(showInTradeValue);
+                    const hasApiKey = parseBoolean(extractValue(entry, 'hasApiKey'));
+                    const hasApiSecret = parseBoolean(extractValue(entry, 'hasApiSecret'));
+                    const hasApiPassphrase = parseBoolean(extractValue(entry, 'hasApiPassphrase'));
+                    const showInTrade = parseBoolean(showInFormsValue ?? showInTradeValue);
 
                     nextFormValues[exchangeKey] = {
                         apiKey: String(apiKey ?? ''),
@@ -178,21 +193,29 @@ const ExchangeKeysPage = () => {
                         showInTrade
                     };
 
+                    nextMetadata[exchangeKey] = {
+                        hasApiKey,
+                        hasApiSecret,
+                        hasApiPassphrase
+                    };
+
                     nextExisting[exchangeKey] = Boolean(
-                        (apiKey ?? '').toString().length > 0 ||
-                        (apiSecret ?? '').toString().length > 0 ||
-                        (apiPassphrase ?? '').toString().length > 0 ||
+                        hasApiKey ||
+                        hasApiSecret ||
+                        hasApiPassphrase ||
                         showInTrade
                     );
                 });
 
                 setFormValues((prev) => ({ ...prev, ...nextFormValues }));
                 setExistingData(nextExisting);
+                setCredentialsMetadata(nextMetadata);
             } catch (error) {
                 console.error(error);
                 notify('Failed to load saved exchange keys', { type: 'warning' });
                 if (isMounted) {
                     setExistingData({});
+                    setCredentialsMetadata({});
                 }
             } finally {
                 if (isMounted) {
@@ -219,6 +242,20 @@ const ExchangeKeysPage = () => {
                 }
             };
         });
+        setValidationErrors((prev) => {
+            if (!prev[exchangeKey]?.[field]) {
+                return prev;
+            }
+            const nextErrors = { ...prev };
+            const fieldErrors = { ...(nextErrors[exchangeKey] ?? {}) };
+            delete fieldErrors[field];
+            if (Object.keys(fieldErrors).length === 0) {
+                delete nextErrors[exchangeKey];
+            } else {
+                nextErrors[exchangeKey] = fieldErrors;
+            }
+            return nextErrors;
+        });
     };
 
     const handleCheckboxChange = (exchangeKey: string, checked: boolean) => {
@@ -236,20 +273,59 @@ const ExchangeKeysPage = () => {
 
     const handleSave = async (exchangeKey: string, exchangeId: string | number) => {
         const values = { ...getDefaultFormValues(), ...formValues[exchangeKey] };
+        const metadata = credentialsMetadata[exchangeKey] ?? {
+            hasApiKey: false,
+            hasApiSecret: false,
+            hasApiPassphrase: false
+        };
+
+        const trimmedApiKey = values.apiKey.trim();
+        const trimmedApiSecret = values.apiSecret.trim();
+        const trimmedApiPassphrase = values.apiPassphrase.trim();
+
+        const errors: Partial<Record<FieldName, string>> = {};
+
+        if (!trimmedApiKey && !metadata.hasApiKey) {
+            errors.apiKey = 'API Key is required.';
+        }
+
+        if (!trimmedApiSecret && !metadata.hasApiSecret) {
+            errors.apiSecret = 'API Secret is required.';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setValidationErrors((prev) => ({ ...prev, [exchangeKey]: errors }));
+            notify('Please resolve the highlighted errors before saving.', { type: 'warning' });
+            return;
+        }
+
+        setValidationErrors((prev) => {
+            if (!prev[exchangeKey]) {
+                return prev;
+            }
+            const next = { ...prev };
+            delete next[exchangeKey];
+            return next;
+        });
+
         setSavingState((prev) => ({ ...prev, [exchangeKey]: true }));
 
-        const payload = {
-            // exchange_id: exchangeId,
+        const payload: Record<string, any> = {
             exchangeId,
-            // api_key: values.apiKey,
-            apiKey: values.apiKey,
-            // api_secret: values.apiSecret,
-            apiSecret: values.apiSecret,
-            // api_passphrase: values.apiPassphrase,
-            apiPassphrase: values.apiPassphrase,
-            // show_in_trade: values.showInTrade,
             showInForms: values.showInTrade
         };
+
+        if (trimmedApiKey) {
+            payload.apiKey = trimmedApiKey;
+        }
+
+        if (trimmedApiSecret) {
+            payload.apiSecret = trimmedApiSecret;
+        }
+
+        if (trimmedApiPassphrase) {
+            payload.apiPassphrase = trimmedApiPassphrase;
+        }
 
         try {
             const response = await fetch(`${API_URL}/user-exchanges`, {
@@ -265,14 +341,36 @@ const ExchangeKeysPage = () => {
                 throw new Error(`Failed to save exchange credentials (${response.status})`);
             }
 
+            const updatedMetadata: ExchangeCredentialsMetadata = {
+                hasApiKey: metadata.hasApiKey || Boolean(trimmedApiKey),
+                hasApiSecret: metadata.hasApiSecret || Boolean(trimmedApiSecret),
+                hasApiPassphrase: metadata.hasApiPassphrase || Boolean(trimmedApiPassphrase)
+            };
+
+            setCredentialsMetadata((prev) => ({
+                ...prev,
+                [exchangeKey]: updatedMetadata
+            }));
+
             setExistingData((prev) => ({
                 ...prev,
                 [exchangeKey]: Boolean(
-                    values.apiKey ||
-                    values.apiSecret ||
-                    values.apiPassphrase ||
+                    updatedMetadata.hasApiKey ||
+                    updatedMetadata.hasApiSecret ||
+                    updatedMetadata.hasApiPassphrase ||
                     values.showInTrade
                 )
+            }));
+
+            setFormValues((prev) => ({
+                ...prev,
+                [exchangeKey]: {
+                    ...values,
+                    apiKey: '',
+                    apiSecret: '',
+                    apiPassphrase: '',
+                    showInTrade: values.showInTrade
+                }
             }));
 
             notify('Exchange credentials saved successfully', { type: 'info' });
@@ -310,6 +408,22 @@ const ExchangeKeysPage = () => {
                 ...prev,
                 [exchangeKey]: false
             }));
+            setCredentialsMetadata((prev) => ({
+                ...prev,
+                [exchangeKey]: {
+                    hasApiKey: false,
+                    hasApiSecret: false,
+                    hasApiPassphrase: false
+                }
+            }));
+            setValidationErrors((prev) => {
+                if (!prev[exchangeKey]) {
+                    return prev;
+                }
+                const next = { ...prev };
+                delete next[exchangeKey];
+                return next;
+            });
 
             notify('Exchange credentials deleted successfully', { type: 'info' });
         } catch (error) {
@@ -383,9 +497,18 @@ const ExchangeKeysPage = () => {
         field: FieldName,
         label: string,
         value: string,
-        disabled: boolean
+        disabled: boolean,
+        metadata: ExchangeCredentialsMetadata,
+        error?: string
     ) => {
         const isVisible = fieldVisibility[exchangeKey]?.[field] ?? false;
+        const hasStoredValue =
+            field === 'apiKey'
+                ? metadata.hasApiKey
+                : field === 'apiSecret'
+                ? metadata.hasApiSecret
+                : metadata.hasApiPassphrase;
+        const helperText = error ?? (hasStoredValue ? 'A value is already saved. Leave blank to keep the current value.' : '');
 
         return (
             <TextField
@@ -397,6 +520,9 @@ const ExchangeKeysPage = () => {
                 onChange={(event) => handleInputChange(exchangeKey, field, event.target.value)}
                 autoComplete="new-password"
                 disabled={disabled}
+                error={Boolean(error)}
+                helperText={helperText}
+                placeholder={hasStoredValue ? '••••••••' : undefined}
                 InputProps={{
                     endAdornment: (
                         <InputAdornment position="end">
@@ -425,12 +551,20 @@ const ExchangeKeysPage = () => {
                 const exchangeId = exchange?.id ?? exchange?.exchangeId ?? exchange?.exchange_id ?? exchange?.name ?? index;
                 const exchangeKey = String(exchangeId);
                 const values = formValues[exchangeKey] ?? getDefaultFormValues();
+                const metadata = credentialsMetadata[exchangeKey] ?? {
+                    hasApiKey: false,
+                    hasApiSecret: false,
+                    hasApiPassphrase: false
+                };
                 const hasData = existingData[exchangeKey] ?? false;
                 const isSaving = savingState[exchangeKey] ?? false;
                 const isDeleting = deletingState[exchangeKey] ?? false;
                 const isTesting = testingState[exchangeKey] ?? false;
-                const hasTestableKeys = Boolean(values.apiKey?.trim()) && Boolean(values.apiSecret?.trim());
+                const hasTestableKeys =
+                    (metadata.hasApiKey || Boolean(values.apiKey?.trim())) &&
+                    (metadata.hasApiSecret || Boolean(values.apiSecret?.trim()));
                 const isBusy = isSaving || isDeleting;
+                const errors = validationErrors[exchangeKey] ?? {};
                 return (
                     <Box key={exchangeKey}>
                         <Card
@@ -466,11 +600,35 @@ const ExchangeKeysPage = () => {
                                             disabled={isBusy}
                                         />
                                     )}
-                                    label="Show in trade"
+                                    label="Show in forms"
                                 />
-                                {renderTextField(exchangeKey, 'apiKey', 'API Key', values.apiKey, isBusy)}
-                                {renderTextField(exchangeKey, 'apiSecret', 'API Secret', values.apiSecret, isBusy)}
-                                {renderTextField(exchangeKey, 'apiPassphrase', 'API Passphrase', values.apiPassphrase, isBusy)}
+                                {renderTextField(
+                                    exchangeKey,
+                                    'apiKey',
+                                    'API Key',
+                                    values.apiKey,
+                                    isBusy,
+                                    metadata,
+                                    errors.apiKey
+                                )}
+                                {renderTextField(
+                                    exchangeKey,
+                                    'apiSecret',
+                                    'API Secret',
+                                    values.apiSecret,
+                                    isBusy,
+                                    metadata,
+                                    errors.apiSecret
+                                )}
+                                {renderTextField(
+                                    exchangeKey,
+                                    'apiPassphrase',
+                                    'API Passphrase',
+                                    values.apiPassphrase,
+                                    isBusy,
+                                    metadata,
+                                    errors.apiPassphrase
+                                )}
                                 <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
                                     {hasTestableKeys && (
                                         <Button
