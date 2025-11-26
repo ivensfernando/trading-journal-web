@@ -2,7 +2,9 @@ import {
     BooleanInput,
     DateField,
     EditButton,
+    Identifier,
     List,
+    RaRecord,
     TextInput,
     useListContext,
 } from 'react-admin';
@@ -13,8 +15,8 @@ const webhookFilters = [
     <BooleanInput key="active" label="Active" source="active" />,
 ];
 
-type WebhookRecord = {
-    id?: number | string;
+type WebhookRecord = RaRecord<Identifier> & {
+    id: Identifier;
     name?: string;
     description?: string;
     type?: string;

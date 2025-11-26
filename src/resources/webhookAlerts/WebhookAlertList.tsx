@@ -1,7 +1,9 @@
 import {
     DateField,
+    Identifier,
     List,
     NumberField,
+    RaRecord,
     ReferenceField,
     ReferenceInput,
     SelectInput,
@@ -19,8 +21,8 @@ const alertFilters = [
     <TextInput key="ticker" label="Ticker" source="ticker" alwaysOn />,
 ];
 
-type WebhookAlertRecord = {
-    id?: number | string;
+type WebhookAlertRecord = RaRecord<Identifier> & {
+    id: Identifier;
     webhook_id?: number | string;
     ticker?: string;
     action?: string;
