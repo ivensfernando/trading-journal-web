@@ -11,6 +11,8 @@ import ExchangeKeysPage from './pages/ExchangeKeysPage';
 import Dashboard from './pages/Dashboard';
 import MyLayout from './layouts/MyLayout';
 import { TradeList, TradeCreate, TradeEdit } from './resources/trades';
+import { WebhookList, WebhookCreate, WebhookEdit } from './resources/webhooks';
+import { WebhookAlertList, WebhookAlertShow } from './resources/webhookAlerts';
 import { lightTheme, darkTheme } from './theme/theme';
 
 function App() {
@@ -34,6 +36,8 @@ function App() {
                 <Route path="/exchange-keys" element={<ExchangeKeysPage />} />
             </CustomRoutes>
             <Resource name="trades" list={TradeList} create={TradeCreate} edit={TradeEdit} />
+            <Resource name="webhooks" list={WebhookList} create={WebhookCreate} edit={WebhookEdit} />
+            <Resource name="webhook-alerts" list={WebhookAlertList} show={WebhookAlertShow} />
         </Admin>
     );
 }

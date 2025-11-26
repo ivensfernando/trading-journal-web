@@ -2,8 +2,10 @@
 import { fetchUtils } from 'react-admin';
 // import simpleRestProvider from 'ra-data-simple-rest';
 import jsonServerProvider from 'ra-data-json-server';
+import { API_URL } from '../config/api';
 
-const apiUrl = 'http://localhost:3010'; // Your Go backend API
+const apiUrl = API_URL; // Base API URL should already include /api/v1
+const apiRootUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
 
 // const httpClient = (url: string, options: fetchUtils.Options = {}) => {
 //     const token = localStorage.getItem('auth_token');
@@ -41,11 +43,35 @@ const dataProvider = {
             body: JSON.stringify(params.data),
         });
 
-        return { data: res.json.data }; // ✅ critical
+        if (resource === 'webhooks') {
+            const webhook = res.json.webhook ?? res.json.data ?? res.json;
+            const token = res.json.token ?? webhook?.token;
+            const baseUrl = res.json.url ?? `${apiRootUrl}/trading/webhook`;
+            const sanitizedBaseUrl = baseUrl?.replace(/\/$/, '');
+            const fullUrl = token && sanitizedBaseUrl
+                ? `${sanitizedBaseUrl}/${token}`
+                : sanitizedBaseUrl;
+
+            return {
+                data: {
+                    ...webhook,
+                    token,
+                    url: sanitizedBaseUrl,
+                    fullUrl,
+                },
+            };
+        }
+
+        if (res.json?.data) {
+            return { data: res.json.data }; // ✅ critical
+        }
+
+        return { data: res.json };
     },
     getOne: async (resource: string, params: any) => {
         const response = await httpClient(`${apiUrl}/${resource}/${params.id}`);
-        return { data: response.json.data }; // ✅ must return `data` object
+        const payload = response.json?.data ?? response.json;
+        return { data: payload }; // ✅ must return `data` object
     },
 };
 
