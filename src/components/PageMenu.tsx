@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { MenuItemLink } from 'react-admin';
-import { Menu as MuiMenu, IconButton, ListItemIcon } from '@mui/material';
+import { Menu as MuiMenu, IconButton } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListIcon from '@mui/icons-material/List';
+import HttpIcon from '@mui/icons-material/Http';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 
 export const PageMenu = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -44,6 +46,18 @@ export const PageMenu = () => {
                     primaryText="Trades"
                     onClick={handleClose}
                     leftIcon={<ListIcon fontSize="small" />}
+                />
+                <MenuItemLink
+                    to="/webhooks"
+                    primaryText="Webhooks"
+                    onClick={handleClose}
+                    leftIcon={<HttpIcon fontSize="small" />}
+                />
+                <MenuItemLink
+                    to="/webhook-alerts"
+                    primaryText="Alerts"
+                    onClick={handleClose}
+                    leftIcon={<NotificationsActiveIcon fontSize="small" />}
                 />
             </MuiMenu>
         </>
