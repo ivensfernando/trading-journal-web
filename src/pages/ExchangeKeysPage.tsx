@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Close as CloseIcon } from '@mui/icons-material';
 import { useGetList, useNotify } from 'react-admin';
-import { API_URL } from '../config/api';
+import { API_V1_URL } from '../config/api';
 
 type FieldName = 'apiKey' | 'apiSecret' | 'apiPassphrase';
 
@@ -150,7 +150,7 @@ const ExchangeKeysPage = () => {
         const fetchUserExchanges = async () => {
             setUserExchangesLoading(true);
             try {
-                const response = await fetch(`${API_URL}/api/v1/user-exchanges/forms`, {
+                const response = await fetch(`${API_V1_URL}/user-exchanges/forms`, {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -328,7 +328,7 @@ const ExchangeKeysPage = () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/api/v1/user-exchanges`, {
+            const response = await fetch(`${API_V1_URL}/user-exchanges`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -391,7 +391,7 @@ const ExchangeKeysPage = () => {
         setDeletingState((prev) => ({ ...prev, [exchangeKey]: true }));
 
         try {
-            const response = await fetch(`${API_URL}/api/v1/user-exchanges/${exchangeId}`, {
+            const response = await fetch(`${API_V1_URL}/user-exchanges/${exchangeId}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -438,7 +438,7 @@ const ExchangeKeysPage = () => {
         setTestingState((prev) => ({ ...prev, [exchangeKey]: true }));
 
         try {
-            const response = await fetch(`${API_URL}/api/v1/user-exchanges/${exchangeId}/test`, {
+            const response = await fetch(`${API_V1_URL}/user-exchanges/${exchangeId}/test`, {
                 method: 'POST',
                 credentials: 'include'
             });

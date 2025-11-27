@@ -3,7 +3,7 @@ import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@m
 import { useGetIdentity, useNotify, useRedirect } from 'react-admin';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { API_URL } from '../config/api';
+import { API_V1_URL } from '../config/api';
 import type { UserIdentity } from '../types/user';
 
 type ProfileFormState = {
@@ -57,7 +57,7 @@ const UpdateUserPage = () => {
         setSubmitting(true);
 
         try {
-            const res = await fetch(`${API_URL}/api/v1/me`, {
+            const res = await fetch(`${API_V1_URL}/me`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

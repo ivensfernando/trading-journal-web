@@ -1,7 +1,7 @@
 // src/pages/CreateUserPage.tsx
 import { useNotify, useRedirect } from 'react-admin';
 import { useState } from 'react';
-import { API_URL } from '../config/api';
+import { API_V1_URL } from '../config/api';
 import { Box, Button, Card, CardContent, Stack, TextField, Typography } from '@mui/material';
 
 type CreateUserForm = {
@@ -39,7 +39,7 @@ const CreateUserPage = () => {
         setSubmitting(true);
 
         try {
-            const res = await fetch(`${API_URL}/api/v1/auth/register`, {
+            const res = await fetch(`${API_V1_URL}/auth/register`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

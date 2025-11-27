@@ -1,25 +1,18 @@
 // src/auth/authProvider.ts
-import { API_URL } from '../config/api';
+import { API_V1_URL } from '../config/api';
 import { Credentials } from '../types/auth';
 import { UserIdentity } from '../types/user';
 
 const authProvider = {
   login: async ({ username, password }: Credentials) => {
-    const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+    const res = await fetch(`${API_V1_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ username, password }),
     });
 
-    console.log(res);
-    console.log(!res.ok);
-
-    const data = await res.json();
-    console.log('data =>', data);
-
     if (!res.ok) {
-      console.log('vai lancar a excao com sucesso');
       throw new Error('Login failed');
     }
 
@@ -27,14 +20,14 @@ const authProvider = {
   },
 
   logout: async () => {
-    await fetch(`${API_URL}/api/v1/logout`, {
+    await fetch(`${API_V1_URL}/logout`, {
       method: 'POST',
       credentials: 'include',
     });
     return Promise.resolve();
   },
   checkAuth: async () => {
-    const res = await fetch(`${API_URL}/api/v1/me`, {
+    const res = await fetch(`${API_V1_URL}/me`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -46,7 +39,7 @@ const authProvider = {
   getPermissions: () => Promise.resolve(),
   getIdentity: async (): Promise<UserIdentity> => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/me`, {
+      const res = await fetch(`${API_V1_URL}/me`, {
         method: 'GET',
         credentials: 'include',
       });
