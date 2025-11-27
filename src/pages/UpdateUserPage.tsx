@@ -57,7 +57,7 @@ const UpdateUserPage = () => {
         setSubmitting(true);
 
         try {
-            const res = await fetch(`${API_URL}/me`, {
+            const res = await fetch(`${API_URL}/api/v1/me`, {
                 method: 'PUT',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },

@@ -5,7 +5,7 @@ import { UserIdentity } from '../types/user';
 
 const authProvider = {
   login: async ({ username, password }: Credentials) => {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -27,14 +27,14 @@ const authProvider = {
   },
 
   logout: async () => {
-    await fetch(`${API_URL}/logout`, {
+    await fetch(`${API_URL}/api/v1/logout`, {
       method: 'POST',
       credentials: 'include',
     });
     return Promise.resolve();
   },
   checkAuth: async () => {
-    const res = await fetch(`${API_URL}/me`, {
+    const res = await fetch(`${API_URL}/api/v1/me`, {
       method: 'GET',
       credentials: 'include',
     });
@@ -46,7 +46,7 @@ const authProvider = {
   getPermissions: () => Promise.resolve(),
   getIdentity: async (): Promise<UserIdentity> => {
     try {
-      const res = await fetch(`${API_URL}/me`, {
+      const res = await fetch(`${API_URL}/api/v1/me`, {
         method: 'GET',
         credentials: 'include',
       });
