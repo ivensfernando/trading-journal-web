@@ -46,19 +46,28 @@ const CreateUserPage = () => {
                 body: JSON.stringify(form),
             });
 
+            if (res.status === 409) {
+                const message =
+                    (await res.text()) || 'User already exists. Please choose a different username.';
+                notify(message, { type: 'warning' });
+                return
+            }
             if (!res.ok) {
-                throw new Error('Failed to create user');
+                const errorMessage = (await res.text()) || 'Failed to create user';
+                throw new Error(errorMessage);
             }
 
             notify('User created successfully');
             redirect('/login');
         } catch (error) {
             console.error('Error creating user', error);
-            notify('Failed to create user');
+            notify(error instanceof Error ? error.message : 'Failed to create user', { type: 'error' });
         } finally {
             setSubmitting(false);
         }
     };
+    // admin java3322321
+    // root openSesame
 
     return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" px={2}>
