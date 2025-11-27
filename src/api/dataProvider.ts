@@ -2,9 +2,9 @@
 import { fetchUtils } from 'react-admin';
 // import simpleRestProvider from 'ra-data-simple-rest';
 import jsonServerProvider from 'ra-data-json-server';
-import { API_URL } from '../config/api';
+import { API_V1_URL } from '../config/api';
 
-const apiUrl = API_URL; // Base API URL should already include /api/v1
+const apiUrl = API_V1_URL; // Base API URL should already include /api/v1
 const apiRootUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
 
 // const httpClient = (url: string, options: fetchUtils.Options = {}) => {
